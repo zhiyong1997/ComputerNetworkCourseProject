@@ -1,2 +1,2 @@
 # ComputerNetworkCourseProject
-Computer Network course project.
+Course project for Computer Network directed by Professor [Yanmin Zhu](http://www.cs.sjtu.edu.cn/~yzhu/).
