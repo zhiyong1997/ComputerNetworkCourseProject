@@ -30,7 +30,7 @@ public class Pinger {
             ServerMode(Integer.parseInt(parsed_args.getOptionValue("l")));
     }
 
-    private static void check_args(CommandLine args) throws Exception {
+    private static void check_args(CommandLine args) {
         if (args.hasOption("c")) {
             if (args.hasOption("l") && args.hasOption("h") && args.hasOption("r")) return;
         } else {
@@ -63,7 +63,7 @@ public class Pinger {
                 do {
                     packet = new DatagramPacket(buf, buf.length);
                     datagramSocket.receive(packet);
-                } while(client_seqnum_wrong(packet, seq_num));
+                } while (client_seqnum_wrong(packet, seq_num));
             } catch (SocketTimeoutException e) {
                 System.out.println(String.format("seq=%d Lost", seq_num));
                 continue;
@@ -77,7 +77,7 @@ public class Pinger {
         System.out.print(String.format("received=%d ", received));
         System.out.print(String.format("lost=%.2f%% ", 100.0 - (100. * received / count)));
         ImmutableTriple<Double, Double, Double> rtt_statistics = get_rtt_statistics();
-        System.out.println(String.format("rtt mean/avg/max=%.0f/%.2f/%.0f", rtt_statistics.left, rtt_statistics.middle, rtt_statistics.right));
+        System.out.println(String.format("rtt min/avg/max=%.0f/%.2f/%.0f", rtt_statistics.left, rtt_statistics.middle, rtt_statistics.right));
     }
 
     private static DatagramPacket client_prepare_packet(int seq_num, long time_stamp, InetAddress address, int port) throws IOException {
@@ -99,7 +99,7 @@ public class Pinger {
         double rtt = (double) (System.currentTimeMillis() - pair.right);
         rtts.add(rtt);
 
-        System.out.print(String.format("size=%d ", packet.getLength()));
+        System.out.print(String.format("size=%d bytes ", packet.getLength() + 8));
         System.out.print("from=" + packet.getAddress().getHostAddress() + ' ');
         System.out.print(String.format("seq=%d ", pair.left));
         System.out.println(String.format("rtt=%.0f", rtt));
@@ -125,7 +125,7 @@ public class Pinger {
 
             // print statistics
             System.out.print(String.format("time=%d ", System.currentTimeMillis()));
-            System.out.print("from="+packet.getAddress().getHostAddress() + ' ');
+            System.out.print("from=" + packet.getAddress().getHostAddress() + ' ');
             System.out.println(String.format("seq=%d", extract_data(packet).left));
 
             // send back
