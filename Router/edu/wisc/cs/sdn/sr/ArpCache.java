@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.floodlightcontroller.packet.ARP;
 import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.util.MACAddress;
 
 /**
@@ -91,7 +92,16 @@ public class ArpCache implements Runnable
 			/*********************************************************/
 		    /* TODO: send ICMP host unreachable to the source        */ 
 		    /* address of all packets waiting on this request        */
-			
+			Ethernet ethernet = request.getWaitingPackets().get(0);
+			String destMAC = ethernet.getDestinationMAC().toString();
+			Iface outIface = null;
+			for (Iface iface : this.router.getInterfaces().values()) {
+			    if (iface.getMacAddress().toString().equals(destMAC)) {
+			        outIface = iface;
+			        break;
+                }
+            }
+            this.router.ICMPReply(this.router.generateICMP((byte) 3, (byte) 1, (IPv4) ethernet.getPayload()), outIface);
 			
 		    /*********************************************************/
 			
@@ -132,7 +142,7 @@ public class ArpCache implements Runnable
 	 * list of packets waiting for this request to be resolved.
 	 * @param etherPacket packet waiting for the MAC for it's next hop IP
 	 * @param outIface interface out which the packet will be sent
-	 * @param nextHopIP the IP address whose MAC should be determined
+	 * @param nextHopIp the IP address whose MAC should be determined
 	 */
 	public void waitForArp(Ethernet etherPacket, Iface outIface, int nextHopIp)
 	{

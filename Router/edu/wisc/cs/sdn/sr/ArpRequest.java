@@ -25,7 +25,7 @@ public class ArpRequest
 	
 	/** List of packets waiting on this request to be resolved */
 	private List<Ethernet> waitingPackets;
-	
+
 	/**
 	 * Create a request for a pending resolution of an IP address's MAC address.
 	 * @param ip IP address whose corresponding MAC address is being requested

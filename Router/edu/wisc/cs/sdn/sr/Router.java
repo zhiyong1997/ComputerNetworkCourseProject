@@ -222,9 +222,9 @@ public class Router
 			IPv4 ipPacket = (IPv4) etherPacket.getPayload();
 			if (packetCorrect(ipPacket)) {
 				if (destinedSelf(ipPacket)) {
-					respond(ipPacket);
+					respond(ipPacket, inIface);
 				} else {
-					forward(ipPacket);
+					forward(ipPacket, inIface);
 				}
 			} else {
 				System.out.println("Received an IPv4 packet with wrong checksum.");
@@ -279,11 +279,13 @@ public class Router
 			{
 				int gatewayIP = request.getIpAddress();
 				Iface outIface = request.getIface();
+				String sourceMAC = outIface.getMacAddress().toString();
 				String destMAC = arpCache.lookup(gatewayIP).getMac().toString();
 				for (Ethernet packet : request.getWaitingPackets())
 				{
 					/*********************************************************/
 					/* TODO: send packet waiting on this request             */
+					packet.setSourceMACAddress(sourceMAC);
 					packet.setDestinationMACAddress(destMAC);
 					sendPacket(packet, outIface);
 					/*********************************************************/
@@ -310,22 +312,30 @@ public class Router
 		return false;
 	}
 
-	private void forward(IPv4 packet) {
+	private void forward(IPv4 packet, Iface inIface) {
+		if (packet.getTtl() == 0) {
+			ICMPReply(generateICMP((byte) 11, (byte) 0, packet), inIface);
+			return;
+		}
 		packet.setTtl((byte)(packet.getTtl() - 1));
 		packet.resetChecksum();
 
 		// Local: get gateway IP addr & get local interface by looking up
 		int destIPAddress = packet.getDestinationAddress();
 		RouteTableEntry entry = routeTable.findEntry(destIPAddress, -1);
+		if (entry == null) {
+			ICMPReply(generateICMP((byte) 3, (byte) 0, packet), inIface);
+			return;
+		}
 		Iface outIface = this.interfaces.get(entry.getInterface());
 		int gateWayAddress = entry.getGatewayAddress();
 		gateWayAddress = gateWayAddress == 0 ? destIPAddress : gateWayAddress;
 
-		// Packet : set packet Source and Dest MAC addr
-		Ethernet etherPacket = (Ethernet) packet.getParent(); 
-		etherPacket.setSourceMACAddress(outIface.getMacAddress().toString());
+		Ethernet etherPacket = (Ethernet) packet.getParent();
 		ArpEntry destMACAddress = arpCache.lookup(gateWayAddress);
 		if (destMACAddress != null) {
+			// Packet : set packet Source and Dest MAC addr
+			etherPacket.setSourceMACAddress(outIface.getMacAddress().toString());
 			etherPacket.setDestinationMACAddress(destMACAddress.getMac().toString());
 			sendPacket(etherPacket, outIface);
 		} else {
@@ -333,8 +343,61 @@ public class Router
 		}
 	}
 	
-	private void respond(IPv4 packet) {
-		
+	private void respond(IPv4 packet, Iface inIface) {
+		byte protocol = packet.getProtocol();
+		if (protocol == packet.PROTOCOL_ICMP) {
+			ICMP icmpPacket = (ICMP) packet.getPayload();
+			if (icmpPacket.getIcmpType() == 8 && icmpPacket.getIcmpCode() == 0) {
+				ICMP icmp = setICMP(icmpPacket, (byte) 0, (byte) 0, null);
+				ICMPReply(icmp, inIface);
+			}
+		} else if (protocol == packet.PROTOCOL_TCP) {
+			ICMPReply(generateICMP((byte) 3, (byte) 3, packet), inIface);
+
+		} else {
+			assert protocol == packet.PROTOCOL_UDP;
+			UDP udpPacket = (UDP) packet.getPayload();
+			if (udpPacket.getDestinationPort() == 520) {
+				// TODO
+				assert false;
+			} else {
+				ICMPReply(generateICMP((byte) 3, (byte) 3, packet), inIface);
+			}
+		}
+	}
+
+	public void ICMPReply(ICMP icmp, Iface outIface) {
+		IPv4 iPv4 = (IPv4) icmp.getParent();
+		Ethernet ethernet = (Ethernet) iPv4.getParent();
+		iPv4.setPayload(icmp);
+		iPv4.setDestinationAddress(iPv4.getSourceAddress());
+		iPv4.setSourceAddress(outIface.getIpAddress());
+		swapSourceDestination(ethernet);
+		sendPacket(ethernet, outIface);
+	}
+
+	public ICMP setICMP(ICMP icmp, byte type, byte code, IPv4 parent) {
+		icmp.setIcmpCode(code);
+		icmp.setIcmpType(type);
+		if (parent != null) icmp.setParent(parent);
+		icmp.resetChecksum();
+		return icmp;
+	}
+
+	public ICMP generateICMP(byte type, byte code, IPv4 parent) {
+		ICMP icmp = new ICMP();
+		icmp.setIcmpType(type);
+		icmp.setIcmpCode(code);
+		icmp.setParent(parent);
+		icmp.resetChecksum();
+		return icmp;
+	}
+
+	public void swapSourceDestination(Ethernet ethernet) {
+		byte[] sourceMAC = ethernet.getSourceMACAddress();
+		byte[] destinationMAC = ethernet.getDestinationMACAddress();
+		ethernet.setDestinationMACAddress(sourceMAC);
+		ethernet.setSourceMACAddress(destinationMAC);
 	}
 
 	private void debug(Object x) {
