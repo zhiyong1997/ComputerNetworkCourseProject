@@ -21,8 +21,8 @@ public class Iperfer {
 
     public static void main(String[] args) throws Exception {
         Options options = new Options();
-        options.addOption(Option.builder("c").hasArg().desc("client mode").build());
-        options.addOption(Option.builder("s").hasArg().desc("server mode").build());
+        options.addOption(Option.builder("c").hasArg(false).desc("client mode").build());
+        options.addOption(Option.builder("s").hasArg(false).desc("server mode").build());
         options.addOption(Option.builder("h").hasArg().desc("server hostname").build());
         options.addOption(Option.builder("p").hasArg().desc("serverOrlisten port").build());
         options.addOption(Option.builder("t").hasArg().desc("time").build());
@@ -45,7 +45,7 @@ public class Iperfer {
         exit(0);
     }
 
-    private static void ClientMode(String server_hostname, int server_port, double time) throws Exception {
+    private static void ClientMode(String server_hostname, int server_port, int time) throws Exception {
         System.out.println("Iperfer Start in Client Mode");
         //client asks for linking with "server_hostname" on port "server_port"
         Socket client = new Socket(server_hostname, server_port);
@@ -59,7 +59,7 @@ public class Iperfer {
 
         int count = 0;
         double startTime = System.currentTimeMillis();
-        while ((double)((System.currentTimeMillis() - startTime) / 1000) <= time) {
+        while ((int)((System.currentTimeMillis() - startTime) / 1000) <= time) {
             try {
                 outputStream.write(clientGenData);
                 //get response from server
@@ -77,8 +77,9 @@ public class Iperfer {
         }
 
         // print statistics
-        System.out.print(String.format("sent=%d KB", (int)count * 1024 / 1000));
-        System.out.print(String.format("rate=%f Mbps", (double)count * 1024.0 * 8 / (10 ^ 12) / time));
+        System.out.print(String.format("time=%d\n", time));
+        System.out.print(String.format("sent=%d KB", (int)count * 1024 / 1024));
+        System.out.print(String.format(" rate=%f Mbps", (double)count / 1024.0 / time));
     }
 
     private static void ServerMode(int listen_port) throws Exception {
@@ -104,12 +105,13 @@ public class Iperfer {
                 startTime = System.currentTimeMillis();
             }
         }
-        double usedTime = (double)(System.currentTimeMillis() - startTime);
+        int usedTime = (int)((System.currentTimeMillis() - startTime) / 1000);
         socket.close();
         serverSocket.close();
 
         // print statistics
-        System.out.print(String.format("received=%d KB", (int)received * 1024 / 1000));
-        System.out.print(String.format("rate=%f Mbps", (double)received * 1024.0 * 8 / (10 ^ 12) / usedTime));
+        System.out.print(String.format("time=%d\n", usedTime));
+        System.out.print(String.format("received=%d KB", (int)received * 1024 / 1024));
+        System.out.print(String.format(" rate=%f Mbps", (double)received / 1024.0 / usedTime));
     }
 }
