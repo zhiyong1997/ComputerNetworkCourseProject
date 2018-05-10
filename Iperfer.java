@@ -77,7 +77,7 @@ public class Iperfer {
         }
 
         // print statistics
-        System.out.print(String.format("time=%d\n", time));
+        //System.out.print(String.format("time=%d\n", time));
         System.out.print(String.format("sent=%d KB", (int)count * 1024 / 1024));
         System.out.print(String.format(" rate=%f Mbps", (double)count / 1024.0 / time));
     }
@@ -110,7 +110,7 @@ public class Iperfer {
         serverSocket.close();
 
         // print statistics
-        System.out.print(String.format("time=%d\n", usedTime));
+        //System.out.print(String.format("time=%d\n", usedTime));
         System.out.print(String.format("received=%d KB", (int)received * 1024 / 1024));
         System.out.print(String.format(" rate=%f Mbps", (double)received / 1024.0 / usedTime));
     }
