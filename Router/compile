@@ -1,0 +1,12 @@
+mkdir ../bin
+javac -d ../bin $(find . -name "*.java")
+
+cd ../bin
+mkdir META-INF
+cd META-INF
+touch MANIFEST.MF
+echo Main-Class: edu.wisc.cs.sdn.sr.Main > MANIFEST.MF
+cd ..
+jar cmvf META-INF/MANIFEST.MF ../Router.jar $(find . -name "*.class")
+
+rm -r ../bin
