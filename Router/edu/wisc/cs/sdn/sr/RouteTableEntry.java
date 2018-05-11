@@ -1,5 +1,8 @@
 package edu.wisc.cs.sdn.sr;
 
+import net.floodlightcontroller.packet.RIPv2;
+import net.floodlightcontroller.packet.RIPv2Entry;
+
 /**
  * An entry in a route table.
  * @author Aaron Gember-Jacobson and Anubhavnidhi Abhashkumar
@@ -20,6 +23,9 @@ public class RouteTableEntry
 	private String interfaceName;
 	
 	//private int timer = 0;
+	public int metric;
+
+	public long timeAdded = 0;
 	
 	/**
 	 * Create a new route table entry.
@@ -30,13 +36,16 @@ public class RouteTableEntry
 	 *        be sent to reach the destination or gateway
 	 */
 	public RouteTableEntry(int destinationAddress, int gatewayAddress, 
-			int maskAddress, String ifaceName)
+			int maskAddress, String ifaceName, int metric)
 	{
 		this.destinationAddress = destinationAddress;
 		this.gatewayAddress = gatewayAddress;
 		this.maskAddress = maskAddress;
 		this.interfaceName = ifaceName;
+		this.metric = metric;
+		this.timeAdded = System.currentTimeMillis();
 	}
+
 	
 	/**
 	 * @return destination IP address
@@ -78,7 +87,8 @@ public class RouteTableEntry
         if (gwString.length() < 8)
         { result += "\t"; }
 		result += Util.intToDottedDecimal(maskAddress) + "\t";
-		result += interfaceName;
+		result += interfaceName + "\t";
+		result += metric;
 		return result;
 	}
 }

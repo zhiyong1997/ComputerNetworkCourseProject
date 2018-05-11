@@ -1,6 +1,7 @@
 package edu.wisc.cs.sdn.sr;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -202,8 +203,13 @@ public class Router
 	 * @param iface interface on which to send the packet
 	 * @return true if the packet was sent successfully, otherwise false
 	 */
-	public boolean sendPacket(Ethernet etherPacket, Iface iface)
-	{ return this.vnsComm.sendPacket(etherPacket, iface.getName()); }
+	public boolean sendPacket(Ethernet etherPacket, Iface iface) {
+		debug("Sending packet.");
+		debug(etherPacket);
+		debug(iface);
+		boolean tmp = this.vnsComm.sendPacket(etherPacket, iface.getName());
+		return tmp;
+	}
 	
 	/**
 	 * Handle an Ethernet packet received on a specific interface.
@@ -306,6 +312,7 @@ public class Router
 
 	private boolean destinedSelf(IPv4 packet) {
 		int address = packet.getDestinationAddress();
+		if (address == Util.dottedDecimalToInt("224.0.0.9")) return true;
 		for (Iface iface :interfaces.values()) {
 			if (address == iface.getIpAddress()) return true;
 		}
@@ -322,7 +329,7 @@ public class Router
 
 		// Local: get gateway IP addr & get local interface by looking up
 		int destIPAddress = packet.getDestinationAddress();
-		RouteTableEntry entry = routeTable.findEntry(destIPAddress, -1);
+		RouteTableEntry entry = routeTable.lookup(destIPAddress);
 		if (entry == null) {
 			ICMPReply(generateICMP((byte) 3, (byte) 0, packet), inIface);
 			return;
@@ -358,8 +365,7 @@ public class Router
 			assert protocol == packet.PROTOCOL_UDP;
 			UDP udpPacket = (UDP) packet.getPayload();
 			if (udpPacket.getDestinationPort() == 520) {
-				// TODO
-				assert false;
+				this.rip.handlePacket((Ethernet) packet.getParent(), inIface);
 			} else {
 				ICMPReply(generateICMP((byte) 3, (byte) 3, packet), inIface);
 			}
@@ -372,7 +378,8 @@ public class Router
 		iPv4.setPayload(icmp);
 		iPv4.setDestinationAddress(iPv4.getSourceAddress());
 		iPv4.setSourceAddress(outIface.getIpAddress());
-		swapSourceDestination(ethernet);
+		ethernet.setDestinationMACAddress(ethernet.getSourceMACAddress());
+		ethernet.setSourceMACAddress(outIface.getMacAddress().toString());
 		sendPacket(ethernet, outIface);
 	}
 
@@ -390,14 +397,17 @@ public class Router
 		icmp.setIcmpCode(code);
 		icmp.setParent(parent);
 		icmp.resetChecksum();
+		appendTruncatedParent(icmp, parent);
 		return icmp;
 	}
 
-	public void swapSourceDestination(Ethernet ethernet) {
-		byte[] sourceMAC = ethernet.getSourceMACAddress();
-		byte[] destinationMAC = ethernet.getDestinationMACAddress();
-		ethernet.setDestinationMACAddress(sourceMAC);
-		ethernet.setSourceMACAddress(destinationMAC);
+	private void appendTruncatedParent(ICMP icmp, IPv4 iPv4) {
+		int headLength = iPv4.getHeaderLength();
+		byte[] payload = iPv4.serialize();
+		payload = Arrays.copyOfRange(payload, 0, headLength * 4 + 8);
+		IPacket payloadPacket = new Data().setData(payload);
+		icmp.setPayload(payloadPacket);
+		payloadPacket.setParent(icmp);
 	}
 
 	private void debug(Object x) {

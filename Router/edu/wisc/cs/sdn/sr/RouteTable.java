@@ -114,7 +114,7 @@ public class RouteTable
 			}
 			
 			// Add an entry to the route table
-			this.addEntry(dstIp, gwIp, maskIp, iface);
+			this.addEntry(dstIp, gwIp, maskIp, iface, 1);
 		}
 	
 		// Close the file
@@ -130,9 +130,9 @@ public class RouteTable
 	 * @param iface router interface out which to send packets to reach the 
 	 *        destination or gateway
 	 */
-	public void addEntry(int dstIp, int gwIp, int maskIp, String iface)
+	public void addEntry(int dstIp, int gwIp, int maskIp, String iface, int metric)
 	{
-		RouteTableEntry entry = new RouteTableEntry(dstIp, gwIp, maskIp, iface);
+		RouteTableEntry entry = new RouteTableEntry(dstIp, gwIp, maskIp, iface, metric);
         synchronized(this.entries)
         { 
             this.entries.add(entry);
@@ -141,7 +141,7 @@ public class RouteTable
 	
 	/**
 	 * Remove an entry from the route table.
-	 * @param dstIP destination IP of the entry to remove
+	 * @param dstIp destination IP of the entry to remove
      * @param maskIp subnet mask of the entry to remove
      * @return true if a matching entry was found and removed, otherwise false
 	 */
@@ -159,22 +159,23 @@ public class RouteTable
 	
 	/**
 	 * Update an entry in the route table.
-	 * @param dstIP destination IP of the entry to update
+	 * @param dstIp destination IP of the entry to update
      * @param maskIp subnet mask of the entry to update
-	 * @param gatewayAddress new gateway IP address for matching entry
+	 * @param gwIp new gateway IP address for matching entry
 	 * @param ifaceName new router interface name for matching entry
      * @return true if a matching entry was found and updated, otherwise false
 	 */
 	public boolean updateEntry(int dstIp, int maskIp, int gwIp, 
-            String ifaceName)
+            String ifaceName, int metric)
 	{
         synchronized(this.entries)
         {
             RouteTableEntry entry = this.findEntry(dstIp, maskIp);
-            if (null == entry)
-            { return false; }
+            if (null == entry) { return false; }
             entry.setGatewayAddress(gwIp);
             entry.setInterface(ifaceName);
+            entry.metric = metric;
+            entry.timeAdded = System.currentTimeMillis();
         }
         return true;
 	}
@@ -198,6 +199,23 @@ public class RouteTable
         }
         return null;
     }
+
+    public RouteTableEntry lookup(int dstIP) {
+		synchronized(this.entries) {
+			RouteTableEntry bestMatchEntry = null;
+			for (RouteTableEntry entry : this.entries) {
+				int mask = entry.getMaskAddress();
+				int maskedDstIP = dstIP & mask;
+				int maskedEntryIP = entry.getDestinationAddress() & mask;
+				if (maskedDstIP == maskedEntryIP) {
+					if ((bestMatchEntry == null) || (mask > bestMatchEntry.getMaskAddress())) { 
+						bestMatchEntry = entry; 
+					}
+				}
+			}
+			return bestMatchEntry;
+		}
+	}
 
 	/**
 	 * Verify the interface specified in entries in the route table refer to 

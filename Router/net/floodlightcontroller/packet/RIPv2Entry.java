@@ -9,6 +9,7 @@ public class RIPv2Entry
 {
     public static final short ADDRESS_FAMILY_IPv4 = 2;
 
+
     protected short addressFamily;
     protected short routeTag;
 	protected int address;
