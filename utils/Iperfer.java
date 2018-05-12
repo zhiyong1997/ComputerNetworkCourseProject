@@ -47,71 +47,88 @@ public class Iperfer {
 
     private static void ClientMode(String server_hostname, int server_port, int time) throws Exception {
         System.out.println("Iperfer Start in Client Mode");
+		byte clientGenData[] = new byte[1024];
+		int count = 0;
+		try {
+			Socket client = new Socket(server_hostname, server_port);
+			client.setSoTimeout(10000);
+			OutputStream outputStream = client.getOutputStream();
+			//InputStream inputStream = client.getInputStream();
+			
+			double startTime = System.currentTimeMillis();
+			while ((int)((System.currentTimeMillis() - startTime) / 1000) < time) {
+				outputStream.write(clientGenData);
+				outputStream.flush();
+				count++;
+			}
+			client.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
         //client asks for linking with "server_hostname" on port "server_port"
-        Socket client = new Socket(server_hostname, server_port);
-        client.setSoTimeout(10000);
+        //Socket client = new Socket(server_hostname, server_port);
+        //client.setSoTimeout(10000);
+		//OutputStream outputStream = client.getOutputStream();
+		//InputStream inputStream = client.getInputStream();
 
-        //get host address
-        InetAddress address = InetAddress.getByName(server_hostname);
-
-        OutputStream outputStream = client.getOutputStream();
-        InputStream inputStream = client.getInputStream();
-
-        int count = 0;
-        double startTime = System.currentTimeMillis();
-        while ((int)((System.currentTimeMillis() - startTime) / 1000) <= time) {
-            try {
-                outputStream.write(clientGenData);
+        //int count = 0;
+        //double startTime = System.currentTimeMillis();
+        //while ((int)((System.currentTimeMillis() - startTime) / 1000) < time) {
+        //   try {
+				
+        //        outputStream.write(clientGenData);
+				//outputStream.flush();
                 //get response from server
-                byte[] getResponse = new byte[1024];
-                int res = inputStream.read(getResponse);
-            } catch (SocketTimeoutException e) {
-                System.out.println("client: time out! get no response!");
-            }
+        //        byte[] getResponse = new byte[1024];
+        //        int res = inputStream.read(getResponse);
+        //    } catch (SocketTimeoutException e) {
+        //        System.out.println("client: time out! get no response!");
+		//		continue;
+        //    }
+        //    count++;
+        //}
 
-            count++;
-        }
-
-        if (client != null) {
-            client.close();
-        }
+        //if (client != null) {
+        //    client.close();
+        //}
 
         // print statistics
         //System.out.print(String.format("time=%d\n", time));
-        System.out.print(String.format("sent=%d KB", (int)count * 1024 / 1024));
-        System.out.print(String.format(" rate=%f Mbps", (double)count / 1024.0 / time));
+        System.out.print(String.format("sent=%d KB", count));
+        System.out.print(String.format(" rate=%f Mbps\n", (double)count * 0.008 / time));
     }
 
     private static void ServerMode(int listen_port) throws Exception {
         System.out.println("Iperfer Start in Server Mode");
-        ServerSocket serverSocket = new ServerSocket(listen_port);
-        Socket socket = serverSocket.accept();
-
+		ServerSocket serverSocket = new ServerSocket(listen_port);
+		Socket socket = serverSocket.accept();
+		InputStream inputStream = socket.getInputStream();
+		//OutputStream outputStream = socket.getOutputStream();
+		byte[] input = new byte[1024];
+		
         int received = 0;
-        boolean getFirstBytes = false;
-        double startTime = 0.0;
+        //boolean getFirstBytes = false;
+        double startTime = System.currentTimeMillis();
         while (true) {
-            InputStream inputStream = socket.getInputStream();
             if (inputStream.read() == -1) {
                 break;
             }
-            byte[] input = new byte[1024];
+			
             int tmp = inputStream.read(input);
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(input);
+            //if (!getFirstBytes) {
+            //    getFirstBytes = true;
+            //    startTime = System.currentTimeMillis();
+            //}
+            //outputStream.write(input);
             received++;
-            if (!getFirstBytes) {
-                getFirstBytes = true;
-                startTime = System.currentTimeMillis();
-            }
         }
         int usedTime = (int)((System.currentTimeMillis() - startTime) / 1000);
-        socket.close();
-        serverSocket.close();
+		socket.close();
+		serverSocket.close();
 
         // print statistics
         //System.out.print(String.format("time=%d\n", usedTime));
-        System.out.print(String.format("received=%d KB", (int)received * 1024 / 1024));
-        System.out.print(String.format(" rate=%f Mbps", (double)received / 1024.0 / usedTime));
+        System.out.print(String.format("received=%d KB", received));
+        System.out.print(String.format(" rate=%f Mbps\n", (double)received * 0.008 / usedTime));
     }
 }
