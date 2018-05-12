@@ -1,0 +1,2 @@
+Iperfer Start in Server Mode
+received=111161.00 KB rate=19.95 Mbps

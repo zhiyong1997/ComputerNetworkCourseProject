@@ -1,2 +1,2 @@
-sent=521368 KB rate=25.547032 Mbps
-received=521368 KB rate=26.891613 Mbps
+Iperfer Start in Server Mode
+received=61780.00 KB rate=20.39 Mbps
