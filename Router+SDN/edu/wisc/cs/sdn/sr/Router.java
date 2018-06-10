@@ -204,11 +204,7 @@ public class Router
 	 * @return true if the packet was sent successfully, otherwise false
 	 */
 	public boolean sendPacket(Ethernet etherPacket, Iface iface) {
-		debug("Sending packet.");
-		debug(etherPacket);
-		debug(iface);
-		boolean tmp = this.vnsComm.sendPacket(etherPacket, iface.getName());
-		return tmp;
+		return this.vnsComm.sendPacket(etherPacket, iface.getName());
 	}
 	
 	/**
